@@ -5,6 +5,7 @@
 #           Imports
 from mpi4py import MPI
 import numpy as np
+from pathlib import Path
 import ufl
 from dolfinx import fem, mesh, io
 from dolfinx.fem.petsc import assemble_matrix
@@ -15,15 +16,19 @@ from lieb_robinson import compute_lieb_robinson
 import os
 
 
-def main():
+def main(output_dir = None):
     # ── Parameters ────────────────────────────────────────────────────────────
     L    = 10.0   # domain half-width (nm, ℏ = m = 1 units)
     N     = 60     # mesh resolution per side
     omega = 0.5    # harmonic trap frequency
     nev   = 1000    # number of eigenvalues to compute
 
-    output_dir = "results"
-    os.makedirs(output_dir, exist_ok=True)
+    # ── Output directory ───────────────────────────────────────────────────────
+    PROJECT_ROOT = Path(__file__).resolve().parent.parent
+    if output_dir is None:
+        output_dir = output_dir = PROJECT_ROOT / "results"
+
+    output_dir.mkdir(exist_ok=True)
 
 
     # ── Build & run solver ────────────────────────────────────────────────────
@@ -56,16 +61,6 @@ def main():
         err = abs(energies[i] - analytic[i]) / abs(analytic[i])
         print(f"  mode {i:02d}: {err:.2e}")
 
-    # ── Save first eigenfunction to XDMF for Paraview ────────────────────────
-    # if eigvecs.shape[0] > 0:
-    #     psi0 = fem.Function(solver.V)
-    #     psi0.x.array[:] = eigvecs[0]
-    #     psi0.name = "psi_0"
-
-    #     with io.XDMFFile(MPI.COMM_WORLD, "eigenstate_0.xdmf", "w") as xdmf:
-    #         xdmf.write_mesh(solver.msh)
-    #         xdmf.write_function(psi0)
-    #     print("\nGround state written to eigenstate_0.xdmf")
 
     # ── Write all eigenstates ─────────────────────────────────────────────────
     print(f"\nWriting {len(eigvecs)} eigenstates to {output_dir}/...")
@@ -83,10 +78,6 @@ def main():
         print(f"  eigenstate_{i:02d}.xdmf  (E = {energies[i]:.6f})")
 
     print("\nDone. Open any eigenstate_XX.xdmf in Paraview with Xdmf3ReaderS.")
-
-    # ── Lieb-Robinson ─────────────────────────────────────────────────────────
-    print("\nComputing Lieb-Robinson space-time diagram...")
-    compute_lieb_robinson(solver, energies, eigvecs, output_dir, M)
 
 
 if __name__ == "__main__":
