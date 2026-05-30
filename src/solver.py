@@ -98,7 +98,7 @@ import gmsh
     
 class Solver:
 
-    def __init__(self, L: float, N: int, omega: float = 0.5, nev: int = 20):
+    def __init__(self, L: float, N: int, omega: float = 0.5, nev: int = 100):
         self.L     = L
         self.N     = N
         self.omega = omega

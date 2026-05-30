@@ -20,7 +20,7 @@ def main():
     L    = 10.0   # domain half-width (nm, ℏ = m = 1 units)
     N     = 60     # mesh resolution per side
     omega = 0.5    # harmonic trap frequency
-    nev   = 150    # number of eigenvalues to compute
+    nev   = 1000    # number of eigenvalues to compute
 
     output_dir = "results"
     os.makedirs(output_dir, exist_ok=True)

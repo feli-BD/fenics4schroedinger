@@ -141,5 +141,5 @@ def compute_lieb_robinson(solver, energies, eigvecs, output_dir, M):
 
     outpath = f"{output_dir}/lieb_robinson.png"
     plt.savefig(outpath, dpi=150)
-    plt.show()
+    # plt.show()
     print(f"  Saved to {outpath}")
