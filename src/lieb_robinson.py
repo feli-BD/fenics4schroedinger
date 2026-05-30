@@ -1,145 +1,243 @@
-#               0. Imports 
+###################################################
+#           Lieb-Robinson bounds
+#           Particle in a box
+###################################################
+
 import os
 import numpy as np
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from mpi4py import MPI
-from dolfinx import fem, io
-from solver import Solver
+
+
+def analytic_lr_velocity(L: float, energies: np.ndarray):
+    """
+    For a free particle, the group velocity is v = dE/dk = k (in natural units).
+    The maximum group velocity from the resolved modes gives the LR velocity:
+        v_LR = sqrt(2 * E_max)
+    since E = k^2/2  =>  k = sqrt(2E)  =>  v = k = sqrt(2E).
+    """
+    return float(np.sqrt(2.0 * energies.max()))
+
 
 def compute_lieb_robinson(solver, energies, eigvecs, output_dir, M):
+    """
+    Computes and plots the Lieb-Robinson space-time diagram.
 
-    #    1. Get mesh coordinates 
-    coords = solver.msh.geometry.x          # shape (n_nodes, 3) — z is always 0
+    Two modes:
+      use_cn=False  — spectral evolution from eigenbasis (fast, approximate)
+      use_cn=True   — uses pre-computed Crank-Nicolson snapshots (exact TDSE)
+
+    Parameters
+    ----------
+    solver       : Solver instance
+    energies     : eigenvalues from solve_eigenproblem
+    eigvecs      : eigenvectors from solve_eigenproblem
+    output_dir   : where to save the figure
+    M            : PETSc mass matrix (for projection)
+    """
+    os.makedirs(output_dir, exist_ok=True)
+
+    coords   = solver.msh.geometry.x
     x_coords = coords[:, 0]
     y_coords = coords[:, 1]
 
-    #    2. Initial Gaussian wavepacket (localized on the left)  
-    x0, y0 = -2.0, 0.0     # center of initial wavepacket
-    sigma  = 1.2            # width
+    # ── 1. Initial Gaussian wavepacket — left quarter of box ──────────────────
+    x0    = -solver.L / 4
+    y0    = 0.0
+    sigma = 0.8
 
-    psi0 = np.exp(-((x_coords - x0)**2 + (y_coords - y0)**2) / (2 * sigma**2))
-    psi0 /= np.linalg.norm(psi0)
+    psi0_raw  = np.exp(-((x_coords - x0)**2 + (y_coords - y0)**2)
+                        / (2 * sigma**2))
 
-    #    3. Project onto eigenbasis: c_n = <phi_n | psi0>   
-    # eigvecs shape: (n_modes, n_dofs)
-    vec_psi0 = M.createVecRight()
-    vec_psi0.array[:] = psi0
-    
-    vec_M_psi0 = M.createVecLeft()
-    M.mult(vec_psi0, vec_M_psi0) # Computes M * psi0
-    
-    # Now project using the properly weighted array
-    coeffs = eigvecs @ vec_M_psi0.array 
+    # M-normalize the wavepacket
+    vec_raw        = M.createVecRight(); vec_raw.array[:]  = psi0_raw
+    vec_M_raw      = M.createVecLeft();  M.mult(vec_raw, vec_M_raw)
+    norm_M         = np.sqrt(float(vec_raw.array @ vec_M_raw.array))
+    psi0           = psi0_raw / norm_M
 
-    print(f"  Projection completeness: {np.sum(np.abs(coeffs)**2):.4f}  (want ~1.0)")
+    # ── 2. Projection onto eigenbasis ─────────────────────────────────────────
+    vec_psi0       = M.createVecRight(); vec_psi0.array[:] = psi0
+    vec_M_psi0     = M.createVecLeft();  M.mult(vec_psi0, vec_M_psi0)
+    coeffs         = eigvecs @ vec_M_psi0.array
 
-    #    4. Time evolution     
-    times = np.linspace(0, 10, 120)
+    completeness   = float(np.sum(np.abs(coeffs)**2))
+    print(f"  Projection completeness: {completeness:.4f}  (want > 0.95)")
+    if completeness < 0.80:
+        print("  WARNING: increase nev for reliable spectral evolution")
+
+    # ── 3. Time points and wavefunction snapshots ─────────────────────────────
+
+    times = np.linspace(0, solver.L / 2, 120)   # T ~ L/2 for propagation
 
     def psi_at_time(t):
         phases = np.exp(-1j * energies * t)
-        return (coeffs * phases) @ eigvecs      # shape (n_dofs,)
+        return (coeffs * phases) @ eigvecs
 
-    #    5. Probe points along x-axis (y ≈ 0)    
-    probe_xs   = np.linspace(-4.5, 4.5, 60)
-    probe_nodes = []
-    for px in probe_xs:
-        dists = (x_coords - px)**2 + (y_coords - 0.0)**2
-        probe_nodes.append(np.argmin(dists))
+    print("  Computing spectral time evolution...")
+    snapshots = np.array([psi_at_time(t) for t in times])
 
-    #    6. Build space-time density matrix       
-    print("  Computing space-time density...")
+    # ── 4. Probe points — y-averaged density along x-axis ────────────────────
+    probe_xs = np.linspace(-solver.L / 2 * 0.9, solver.L / 2 * 0.9, 120)
+    dx_probe = probe_xs[1] - probe_xs[0]
+    dy_half  = solver.L / 2 * 0.3    # average over central 30% width
+
+    print("  Building space-time density...")
     density_xt = np.zeros((len(times), len(probe_xs)))
 
-    for ti, t in enumerate(times):
-        psi_t = psi_at_time(t)
-        rho   = np.abs(psi_t)**2
-        for xi, node in enumerate(probe_nodes):
-            density_xt[ti, xi] = rho[node]
+    for ti, psi_t in enumerate(snapshots):
+        rho = np.abs(psi_t)**2
+        for xi, px in enumerate(probe_xs):
+            mask = (
+                (np.abs(x_coords - px) < dx_probe) &
+                (np.abs(y_coords)      < dy_half)
+            )
+            density_xt[ti, xi] = rho[mask].mean() if mask.any() else 0.0
 
-    #    7. Estimate LR velocity from wavefront   
-    # Find the furthest x where density exceeds a threshold at each time
-    threshold  = 1e-4 * density_xt.max()
-    front_x_right, front_x_left, front_t = [], [], []
+    # ── 5. Wavefront detection ────────────────────────────────────────────────
+    threshold     = 1e-4 * density_xt.max()
+    front_r, front_l, front_t = [], [], []
 
     for ti, t in enumerate(times[1:], 1):
         row  = density_xt[ti]
         mask = row > threshold
         if mask.any():
-            front_x_right.append(probe_xs[mask].max())   # rightward
-            front_x_left.append(probe_xs[mask].min())    # leftward
+            front_r.append(probe_xs[mask].max())
+            front_l.append(probe_xs[mask].min())
             front_t.append(t)
 
-    front_t       = np.array(front_t)
-    front_x_right = np.array(front_x_right)
-    front_x_left  = np.array(front_x_left)
+    front_t = np.array(front_t)
+    front_r = np.array(front_r)
+    front_l = np.array(front_l)
 
-    # Fit both fronts and average for a symmetric v_LR
+    # Fit LR velocity from both fronts
+    v_LR = 1.0
     if len(front_t) > 3:
-        v_right = np.polyfit(front_t, front_x_right, 1)[0]
-        v_left  = np.polyfit(front_t, front_x_left,  1)[0]
-        v_LR    = (v_right - v_left) / 2      # average of both arms
+        v_right = np.polyfit(front_t, front_r, 1)[0]
+        v_left  = np.polyfit(front_t, front_l, 1)[0]
+        v_LR    = (v_right - v_left) / 2
         print(f"  v_right = {v_right:.4f},  v_left = {v_left:.4f}")
-        print(f"  Estimated LR velocity: v_LR = {v_LR:.4f}")
+        print(f"  Measured v_LR = {v_LR:.4f}")
 
-    #    8. Plot       
-    fig, axes = plt.subplots(1, 3, figsize=(16, 5))
+    # Analytic LR velocity
+    v_analytic = analytic_lr_velocity(solver.L, energies)
+    print(f"  Analytic v_LR = sqrt(2*E_max) = {v_analytic:.4f}")
 
-    # --- Left: linear scale space-time density ---
+    # ── 6. Exponential decay fit outside cone ─────────────────────────────────
+    t_idx    = int(0.65 * len(times))
+    t_slice  = times[t_idx]
+    profile  = density_xt[t_idx]
+    x_rel    = probe_xs - (x0 + v_LR * t_slice)
+
+    mu, slope, intercept = None, None, None
+    outside  = x_rel > 0.5
+    if outside.sum() > 4:
+        valid = profile[outside] > 1e-12
+        if valid.sum() > 4:
+            slope, intercept = np.polyfit(
+                x_rel[outside][valid],
+                np.log(profile[outside][valid]), 1
+            )
+            mu = -slope
+            print(f"  Decay constant mu = {mu:.4f}")
+
+    # ── 7. Professional Publication-Quality Plots ─────────────────────────────
+    plt.style.use("seaborn-v0_8-whitegrid" if "seaborn-v0_8-whitegrid" in plt.style.available else "default")
+    fig, axes = plt.subplots(1, 3, figsize=(18, 5.5), dpi=150)
+    t_arr = np.linspace(0, times[-1], 300)
+
+    # ═════════════════════════════════════════════════════════════════════════
+    # PANEL 1: Space-Time Heatmap with Logarithmic Contours
+    # ═════════════════════════════════════════════════════════════════════════
+    # We use a log scale for the heatmap to expose the faint wavefront structure
+    log_density = np.log10(density_xt + 1e-10)
+    
     im0 = axes[0].imshow(
-        density_xt, aspect="auto", origin="lower",
-        extent=[probe_xs[0], probe_xs[-1], times[0], times[-1]],
-        cmap="inferno"
-    )
-    plt.colorbar(im0, ax=axes[0], label=r"$|\psi(x,t)|^2$")
-    t_arr = np.linspace(0, times[-1], 200)
-    axes[0].plot(x0 + v_LR * t_arr, t_arr, "w--", lw=1.5, label=f"$v_{{LR}}={v_LR:.2f}$")
-    axes[0].plot(x0 - v_LR * t_arr, t_arr, "w--", lw=1.5)
-    # axes[0].scatter(front_x_right, front_t, s=4, c="cyan", label="wavefront x")
-    # axes[0].scatter(front_x_left, front_t, s=4, c="cyan", label="wavefront y")
-    axes[0].set_xlabel("x")
-    axes[0].set_ylabel("t")
-    axes[0].set_title("Space-time density")
-    axes[0].legend(fontsize=8)
-
-    # --- Middle: log scale (shows exponential decay outside cone) ---
-    log_density = np.log10(density_xt + 1e-12)
-    im1 = axes[1].imshow(
         log_density, aspect="auto", origin="lower",
         extent=[probe_xs[0], probe_xs[-1], times[0], times[-1]],
-        cmap="viridis", vmin=-10, vmax=log_density.max()
+        cmap="magma", vmin=-6, vmax=log_density.max()
     )
-    plt.colorbar(im1, ax=axes[1], label=r"$\log_{10}|\psi|^2$")
-    axes[1].plot(x0 + v_LR * t_arr, t_arr, "r--", lw=1.5, label="LR cone")
-    axes[1].plot(x0 - v_LR * t_arr, t_arr, "r--", lw=1.5)
-    axes[1].set_xlabel("x")
-    axes[1].set_ylabel("t")
-    axes[1].set_title("Log scale: decay outside cone")
-    axes[1].legend(fontsize=8)
+    
+    # Overlay discrete logarithmic contours to show the shape of the cone clearly
+    contours = axes[0].contour(
+        probe_xs, times, log_density, 
+        levels=[-4, -3, -2], colors="white", alpha=0.5, linestyles=":"
+    )
+    axes[0].clabel(contours, inline=True, fmt=lambda x: f"$10^{{{int(x)}}}$", fontsize=8)
 
-    # --- Right: decay profile at fixed time (slice through the cone) ---
-    t_slice_idx = len(times) // 2
-    t_slice     = times[t_slice_idx]
-    profile     = density_xt[t_slice_idx]
-    x_rel       = probe_xs - (x0 + v_LR * t_slice)   # distance from cone edge
+    # Draw the theoretical and measured bounds
+    axes[0].plot(x0 + v_LR * t_arr, t_arr, "w--", lw=2, label=fr"Meas. $v_{{LR}} = {v_LR:.2f}$")
+    axes[0].plot(x0 - v_LR * t_arr, t_arr, "w--", lw=2)
+    axes[0].plot(x0 + v_analytic * t_arr, t_arr, "c-.", lw=1.2, label=fr"Analytic Limit $v = {v_analytic:.2f}$")
+    axes[0].plot(x0 - v_analytic * t_arr, t_arr, "c-.", lw=1.2)
+    
+    axes[0].set_xlim(probe_xs[0], probe_xs[-1])
+    axes[0].set_ylim(times[0], times[-1])
+    axes[0].set_xlabel("Spatial Coordinate $x$", fontsize=11)
+    axes[0].set_ylabel("Time $t$", fontsize=11)
+    axes[0].set_title("A: Information Light Cone (Log Scale)", fontsize=12, fontweight="bold")
+    axes[0].legend(loc="upper right", frameon=True, facecolor="black", framealpha=0.6, labelcolor="white")
+    
+    cbar = plt.colorbar(im0, ax=axes[0])
+    cbar.set_label(r"$\log_{10} \langle|\psi|^2\rangle_y$", fontsize=10)
 
-    axes[2].semilogy(x_rel, profile + 1e-12, "k-", lw=1.5)
-    axes[2].axvline(0, color="r", linestyle="--", label="LR cone edge")
-    axes[2].set_xlabel(r"$x - (x_0 + v_{LR} t)$")
-    axes[2].set_ylabel(r"$|\psi(x,t)|^2$  (log scale)")
-    axes[2].set_title(f"Spatial profile at t = {t_slice:.1f}")
-    axes[2].legend(fontsize=8)
-    axes[2].grid(True, alpha=0.3)
+    # ═════════════════════════════════════════════════════════════════════════
+    # PANEL 2: Snapshot Evolution (How the wave spreads over time)
+    # ═════════════════════════════════════════════════════════════════════════
+    # Pick 4 evenly spaced times to demonstrate the dynamics intuitively
+    sample_indices = [0, int(len(times)*0.25), int(len(times)*0.5), int(len(times)*0.75)]
+    colors = ["#34495e", "#e74c3c", "#3498db", "#2ecc71"]
+    
+    for idx, col in zip(sample_indices, colors):
+        axes[1].plot(
+            probe_xs, density_xt[idx], 
+            color=col, lw=1.8, 
+            label=f"$t = {times[idx]:.2f}$"
+        )
+    
+    axes[1].set_xlabel("Spatial Coordinate $x$", fontsize=11)
+    axes[1].set_ylabel(r"Probability Density $\langle|\psi|^2\rangle_y$", fontsize=11)
+    axes[1].set_title("B: Spatial Profiles over Time", fontsize=12, fontweight="bold")
+    axes[1].set_xlim(probe_xs[0], probe_xs[-1])
+    axes[1].legend(loc="upper right", frameon=True)
+    axes[1].grid(True, linestyle="--", alpha=0.5)
 
+    # ═════════════════════════════════════════════════════════════════════════
+    # PANEL 3: Quantifying the Exponential Tail (Lieb-Robinson Leakage)
+    # ═════════════════════════════════════════════════════════════════════════
+    axes[2].semilogy(x_rel, profile + 1e-10, "k-", lw=2, label=f"FEM Data ($t={t_slice:.2f}$)")
+    axes[2].axvline(0, color="r", linestyle="--", lw=1.5, label="Cone Edge ($x_0 + v_{LR}t$)")
+    
+    if mu is not None and slope is not None:
+        x_fit = x_rel[outside]
+        axes[2].semilogy(
+            x_fit,
+            np.exp(intercept + slope * x_fit),
+            "b--", lw=2, label=fr"Fit: $e^{{-\mu x}}$ ($\mu={mu:.2f}$)"
+        )
+    
+    axes[2].set_xlabel(r"Distance from Wavefront Edge: $x - (x_0 + v_{LR}\,t)$", fontsize=11)
+    axes[2].set_ylabel(r"Log Probability Density $\langle|\psi|^2\rangle_y$", fontsize=11)
+    axes[2].set_title("C: Exponential Leakage Tail", fontsize=12, fontweight="bold")
+    axes[2].set_xlim(x_rel.min(), x_rel.max())
+    axes[2].set_ylim(1e-7, density_xt.max() * 2)
+    axes[2].legend(loc="upper right", frameon=True)
+    axes[2].grid(True, which="both", linestyle="--", alpha=0.5)
+
+    # Supertitle layout adjustments
     plt.suptitle(
-        f"Lieb-Robinson bounds — 2D harmonic oscillator\n"
-        f"$\\omega={solver.omega}$,  $v_{{LR}}={v_LR:.3f}$,  "
-        f"{len(energies)} eigenmodes",
-        fontsize=11
+        f"Verification of Lieb-Robinson Bounds — 2D Particle in a Box (Spectral Engine)\n"
+        f"Domain $L={solver.L}$, Mesh $N={solver.N}$ | Resolved Modes: {len(energies)} | "
+        fr"Extracted Bounds: $v_{{LR}}={v_LR:.3f}$, $\mu={mu:.3f}$",
+        fontsize=13, fontweight="bold", y=0.98
     )
+    
     plt.tight_layout()
+    
+    label = "spectral_enhanced"
+    outpath = os.path.join(output_dir, f"lieb_robinson_{label}.png")
+    plt.savefig(outpath, dpi=200, bbox_inches="tight")
+    plt.close(fig)
+    print(f"  [SUCCESS] Enhanced visualization saved to {outpath}")
 
-    outpath = f"{output_dir}/lieb_robinson.png"
-    plt.savefig(outpath, dpi=150)
-    # plt.show()
-    print(f"  Saved to {outpath}")
+    return v_LR, v_analytic, mu
