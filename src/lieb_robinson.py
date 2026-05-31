@@ -8,7 +8,9 @@ import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-
+import dolfinx.io as io
+import dolfinx.fem as fem
+import src.solver as Solver
 
 def analytic_lr_velocity(L: float, energies: np.ndarray):
     """
@@ -23,10 +25,6 @@ def analytic_lr_velocity(L: float, energies: np.ndarray):
 def compute_lieb_robinson(solver, energies, eigvecs, output_dir, M):
     """
     Computes and plots the Lieb-Robinson space-time diagram.
-
-    Two modes:
-      use_cn=False  — spectral evolution from eigenbasis (fast, approximate)
-      use_cn=True   — uses pre-computed Crank-Nicolson snapshots (exact TDSE)
 
     Parameters
     ----------
@@ -67,6 +65,8 @@ def compute_lieb_robinson(solver, energies, eigvecs, output_dir, M):
         print("  WARNING: increase nev for reliable spectral evolution")
 
     # ── 3. Time points and wavefunction snapshots ─────────────────────────────
+
+    # TODO: combine this spectral evolution with the one in solver.solve_time_evolution to avoid code duplication
 
     times = np.linspace(0, solver.L / 2, 120)   # T ~ L/2 for propagation
 
@@ -186,7 +186,7 @@ def compute_lieb_robinson(solver, energies, eigvecs, output_dir, M):
     # ═════════════════════════════════════════════════════════════════════════
     # Pick 4 evenly spaced times to demonstrate the dynamics intuitively
     sample_indices = [0, int(len(times)*0.25), int(len(times)*0.5), int(len(times)*0.75)]
-    colors = ["#34495e", "#e74c3c", "#3498db", "#2ecc71"]
+    colors = ["#34495e", "#e74c3c", "#3394d4", "#2ecc71"]
     
     for idx, col in zip(sample_indices, colors):
         axes[1].plot(
@@ -239,5 +239,40 @@ def compute_lieb_robinson(solver, energies, eigvecs, output_dir, M):
     plt.savefig(outpath, dpi=200, bbox_inches="tight")
     plt.close(fig)
     print(f"  [SUCCESS] Enhanced visualization saved to {outpath}")
+
+    psi_eval_func = fem.Function(solver.V, name="Probability_Density")
+    cone_func     = fem.Function(solver.V, name="Lieb_Robinson_Cone")
+
+    dof_coords = solver.V.tabulate_dof_coordinates()
+    x_dofs     = dof_coords[:, 0]
+
+    # Initialize the VTK file exporter
+    vtk_path = os.path.join(output_dir, "wavepacket/wavepacket_evolution.pvd")
+    with io.VTKFile(solver.msh.comm, vtk_path, "w") as vtk:
+        
+        print("  Exporting snapshots for ParaView...")
+        for ti, t in enumerate(times):
+            # Calculate the complex wavefunction array for this specific time
+            psi_t = snapshots[ti] 
+            
+            # Calculate the physical probability density: |psi|^2
+            rho_t = np.abs(psi_t)**2
+            
+            # Assign the calculated real densities to the FEniCSx function vector
+            psi_eval_func.x.array[:] = rho_t
+
+            cone_radius = v_LR * t
+            inside_cone = np.abs(x_dofs - x0) <= cone_radius
+            
+            # Assign 1.0 to DOFs inside the cone, 0.0 to those outside
+            cone_field = np.where(inside_cone, 1.0, 0.0)
+            cone_func.x.array[:] = cone_field
+            
+            # Write the timestep to the VTK file series
+            vtk.write_function(psi_eval_func, t)
+            vtk.write_function(cone_func, t)
+
+    print(f"  [SUCCESS] ParaView compatible file saved to {vtk_path}")
+
 
     return v_LR, v_analytic, mu

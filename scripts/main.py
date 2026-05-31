@@ -51,7 +51,7 @@ def main():
     coords   = solver.msh.geometry.x
     x_coords = coords[:, 0]
     y_coords = coords[:, 1]
-    x0, y0, sigma = -L/4, 0.0, 0.8
+    x0, y0, sigma = 0.0, 0.0, 0.8
 
     psi0_raw  = np.exp(-((x_coords - x0)**2 + (y_coords - y0)**2)
                         / (2 * sigma**2))
@@ -70,6 +70,28 @@ def main():
     print("\nRunning spectral time evolution...")
 
     times, snapshots = solver.solve_time_evolution(M = M, energies=energies,eigvecs=eigvecs, psi0=psi0_raw)
+
+    psi_eval_func = fem.Function(solver.V, name="Probability_Density")
+
+    # Initialize the VTK file exporter
+    vtk_path = os.path.join(output_dir, "particle_in_box_time_evol/particle_in_box_time_evol.pvd")
+    with io.VTKFile(solver.msh.comm, vtk_path, "w") as vtk:
+        
+        print("  Exporting snapshots for ParaView...")
+        for ti, t in enumerate(times):
+            # Calculate the complex wavefunction array for this specific time
+            psi_t = snapshots[ti] 
+            
+            # Calculate the physical probability density: |psi|^2
+            rho_t = np.abs(psi_t)**2
+            
+            # Assign the calculated real densities to the FEniCSx function vector
+            psi_eval_func.x.array[:] = rho_t
+            
+            # Write the timestep to the VTK file series
+            vtk.write_function(psi_eval_func, t)
+
+    print(f"  [SUCCESS] ParaView compatible file saved to {vtk_path}")
 
 
 

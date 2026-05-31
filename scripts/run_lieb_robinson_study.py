@@ -57,18 +57,13 @@ def main():
                         / (2 * sigma**2))
     psi0_raw /= np.linalg.norm(psi0_raw)
 
-    # ── Option A: Lieb-Robinson via spectral evolution ────────────────────────
+    # ── Lieb-Robinson  ────────────────────────────────────────────────────────────────
     print("\nComputing Lieb-Robinson (spectral)...")
     v_meas, v_anal, mu = compute_lieb_robinson(solver, energies, eigvecs, output_dir, M)
-    
+
     print(f"\n  Measured v_LR  = {v_meas:.4f}")
     print(f"  Analytic v_LR  = {v_anal:.4f}")
     print(f"  Decay constant = {mu}")
-
-    # ── Spectral time evolution ────────────────────────────────────────────────
-    print("\nRunning spectral time evolution...")
-
-    times, snapshots = solver.solve_time_evolution(M = M, energies=energies,eigvecs=eigvecs, psi0=psi0_raw)
 
 
 

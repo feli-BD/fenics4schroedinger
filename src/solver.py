@@ -152,9 +152,7 @@ class Solver:
         vec_M_psi0     = M.createVecLeft();  M.mult(vec_psi0, vec_M_psi0)
         coeffs         = eigvecs @ vec_M_psi0.array
         times = np.linspace(0, self.L / 2, 120)   # T ~ L/2 for propagation
-        
-        print("Projection coefficients:")
-        print(np.abs(coeffs[:10]))
+
         def psi_at_time(t):
             phases = np.exp(-1j * energies * t)
             return (coeffs * phases) @ eigvecs
