@@ -2,7 +2,7 @@
 #           GitLab CI/CD Pipeline
 ###################################################
 
-image: dolfinx/dolfinx:v0.7.3   # official FEniCSx Docker image
+image: dolfinx/dolfinx:v0.7.3 
 
 # Pipeline stages run in order
 stages:
@@ -41,7 +41,7 @@ verification-tests:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "push"'
 
-# ── Stage 3: study — run the science (only on main branch) ───────────────────
+# ── Stage 3: study ───────────────────────────────────────────────────────────
 run-verification:
   stage: study
   script:
@@ -57,11 +57,11 @@ run-verification:
 run-timeverification:
   stage: study
   script:
-    - mkdir -p results/time-verification
+    - mkdir -p results/time_verification
     - python scripts.run_verification_time_evolution
   artifacts:
     paths:
-      - results/verification/
+      - results/time_verification/
     expire_in: 1 month
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
