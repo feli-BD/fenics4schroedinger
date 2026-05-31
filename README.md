@@ -10,7 +10,7 @@ When a localized Gaussian wavepacket is initialized at the exact center of a har
 ## Lieb-Robinson Bounds for particle in 2D Box
 By breaking geometric symmetry (placing the initial wavepacket off-center at $x_0 = -L/4$), we isolate a clear, directional wavefront corridor. To verify the **Lieb-Robinson Speed Limit ($v_{LR}$)**, the simulation uses a dynamic visibility threshold mask (left video) alongside a twin boundary-contour tracker (right video). Information is strictly prohibited from leaking beyond the linear expanding light cone wall, except for a minor exponentially suppressed tail.
 
-|![Particle in a Box Evolution](media/particle2.gif) ![Particle in a Box Evolution](media/particle2_LR.gif)|
+![Particle in a Box Evolution](media/particle2.gif) ![Particle in a Box Evolution](media/particle2_LR.gif)
 
 
 
@@ -25,6 +25,9 @@ This project is built to run smoothly inside a **Linux/WSL2** environment
 * FEniCSx (`dolfinx`)
 * `mpi4py`, `petsc4py`, `slepc4py`
 * `numpy`, `matplotlib`
+
+### Verify the stack is working
+    python -c "import dolfinx, gmsh, petsc4py, mpi4py; print('FEniCSx stack ok')"
 
 ### Recommended Setup via Conda
 The most reliable method to install the underlying C-libraries (PETSc/SLEPc/DOLFINx) alongside Python is via `conda-forge`:
@@ -55,20 +58,30 @@ FEniCS4Schroedinger/
 
 ## Usage
 
-###  Simple test run of particle in a 2D box
-python scripts.main or python3 scripts.main
+### Main Time Evolution 
+
+```bash
+# Quick default run (Square domain, single wavepacket)
+python3 scripts/main.py
+
+# Run a circular domain configuration with a fine mesh and custom eigenvalue resolution
+python3 scripts/main.py --mesh_type circle --radius 5.0 --target_h 0.12 --nev 200
+
+# Run a high-energy dual-wavepacket collision inside a chaotic Bunimovich Stadium
+python3 scripts/main.py --mesh_type stadium --num_packets 2 -L 6.0 --radius 3.0  --nev 250
 
 ### Run Lieb Robinson for a particle in a 2D box 
-python scripts.run_lieb_robinson_study or python3 scripts.run_lieb_robinson_study
+python3 -m scripts.run_lieb_robinson_study
+```
 
 ### Verify solver
 
-Eigenvalue FEM: python scripts.run_verification or python3 scripts.run_verification
+Eigenvalue FEM: python3 -m scripts.run_verification
 
-Time Evolution: python scripts.run_verification_time_evolution or python3 scripts.run_verification_time_evolution
+Time Evolution: python3 -m scripts.run_verification_time_evolution
 
 ### Convergence study
-python scripts.run_convergence or python3 scripts.run_convergence
+python3 -m scripts.run_convergence
  
 ### The results
 | Simulation Run  | Generation Script | Target Output Directory | What is saved |

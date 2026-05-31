@@ -11,12 +11,10 @@ from slepc4py import SLEPc
 import ufl
 from dolfinx import fem, mesh
 from dolfinx.fem.petsc import assemble_matrix
-from src.mesh import make_mesh
-
 
 class Solver:
 
-    def __init__(self, L: float, N: int, nev: int = 100):
+    def __init__(self, msh, facet_tags, L: float, N: int, nev: int = 100):
         """
         Parameters
         ----------
@@ -27,11 +25,13 @@ class Solver:
         self.L   = L
         self.N   = N
         self.nev = nev
+        self.msh = msh
+        self.facet_tags = facet_tags
 
-        self.msh, self.facet_tags    = make_mesh(self.L, self.N)
         self.V                       = fem.functionspace(self.msh, ("Lagrange", 1))
         self.bc, self.bc_dofs        = self._boundary_conditions()
         self.a_form, self.m_form     = self._variational_forms()
+
 
     # ── Boundary conditions ───────────────────────────────────────────────────
     def _boundary_conditions(self):

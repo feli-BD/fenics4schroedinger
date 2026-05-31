@@ -3,26 +3,37 @@
 ###################################################
 
 import os
+import argparse
 import numpy as np
 import matplotlib
 matplotlib.use("Agg") # issue in WSL vscode
 from mpi4py import MPI
 from dolfinx import fem, io
 from src.solver import Solver
-from src.lieb_robinson import compute_lieb_robinson
+from src.mesh import make_square_mesh, make_circular_mesh, make_stadium_mesh
 
 
-def main():
-    L          = 10.0
-    N          = 60
-    nev        = 150
-    T          = 8.0      # total simulation time
-    dt         = 0.005    # Crank-Nicolson timestep
+def main(msh_type: str = "square", num_packets: int = 1, L: float = 10.0, N: int = 60, nev: int = 150, radius: float = 5.0, target_h: float = 0.2, T: float = 8.0, dt: float = 0.005):
+    print(f"--- Running Simulation Setup ---")
+    print(f"Mesh Type: {msh_type} | Eigenvalues (nev): {nev}")
     output_dir = "results"
     os.makedirs(output_dir, exist_ok=True)
 
+    # ── Build mesh ───────────────────────────────────────────────────────────────
+    print("Building mesh...")
+  
+    if msh_type == "square":
+        msh, facet_tags = make_square_mesh(L=L, N=N)
+    elif msh_type == "circular":
+        msh, facet_tags = make_circular_mesh(radius=radius, target_h=target_h)
+    elif msh_type == "stadium":
+        msh, facet_tags = make_stadium_mesh(L_straight=L, radius=radius, target_h=target_h)
+        total_time = (L / 2.0) + radius
+    else:
+        raise ValueError("Invalid mesh type. Choose 'square', 'circular', or 'stadium'.")
+
     # ── Build solver ──────────────────────────────────────────────────────────
-    solver = Solver(L=L, N=N, nev=nev)
+    solver = Solver(msh = msh, facet_tags = facet_tags, L=L, N=N, nev=nev)
     print("Assembling matrices...")
     A, M = solver.assemble()
 
@@ -47,24 +58,27 @@ def main():
             f.write_mesh(solver.msh)
             f.write_function(psi)
 
-    # ── Initial wavepacket ────────────────────────────────────────────────────
+
+    # ── Wavepacket ────────────────────────────────────────────────────
     coords   = solver.msh.geometry.x
     x_coords = coords[:, 0]
     y_coords = coords[:, 1]
-    x0, y0, sigma = 0.0, 0.0, 0.8
 
-    psi0_raw  = np.exp(-((x_coords - x0)**2 + (y_coords - y0)**2)
-                        / (2 * sigma**2))
-    psi0_raw /= np.linalg.norm(psi0_raw)
+    if num_packets == 1:
+        wavepacket_configs = [{"x0": 0.0, "y0": 0.0, "sigma": 0.4, "kx": 0.0, "ky": 0.0}]
+    elif num_packets == 2:
+        wavepacket_configs = [
+            {"x0": -L/4.0, "y0": 0.0, "sigma": 0.4, "kx":  4.0, "ky": 0.0},
+            {"x0":  L/4.0, "y0": 0.0, "sigma": 0.4, "kx": -4.0, "ky": 0.0}
+        ]
+    else:
+        raise ValueError("Invalid number of wavepackets. Choose 1 or 2.")
+    
+    psi0_raw = np.zeros_like(x_coords, dtype=np.complex128)
 
-    # ── Option A: Lieb-Robinson via spectral evolution ────────────────────────
-    # print("\nComputing Lieb-Robinson (spectral)...")
-    # v_meas, v_anal, mu = compute_lieb_robinson(
-    #     solver, energies, eigvecs, output_dir, M, use_cn=False
-    # )
-    # print(f"\n  Measured v_LR  = {v_meas:.4f}")
-    # print(f"  Analytic v_LR  = {v_anal:.4f}")
-    # print(f"  Decay constant = {mu}")
+    for packet in wavepacket_configs:
+        r_squared = (x_coords - packet["x0"])**2 + (y_coords - packet["y0"])**2
+        psi0_raw += np.exp(-r_squared / (2 * packet["sigma"]**2))
 
     # ── Spectral time evolution ────────────────────────────────────────────────
     print("\nRunning spectral time evolution...")
@@ -74,7 +88,7 @@ def main():
     psi_eval_func = fem.Function(solver.V, name="Probability_Density")
 
     # Initialize the VTK file exporter
-    vtk_path = os.path.join(output_dir, "particle_in_box_time_evol/particle_in_box_time_evol.pvd")
+    vtk_path = os.path.join(output_dir, f"time_evolution/time_evol_{msh_type}_{num_packets}pkts.pvd")
     with io.VTKFile(solver.msh.comm, vtk_path, "w") as vtk:
         
         print("  Exporting snapshots for ParaView...")
@@ -95,5 +109,67 @@ def main():
 
 
 
+# This block intercepts terminal execution
 if __name__ == "__main__":
-    main()
+    # Initialize the argument parser with a clear description
+    parser = argparse.ArgumentParser(
+        description="FEniCS4Schroedinger: Finite Element Simulation for the 2D Schrödinger Equation."
+    )
+
+    # Add parameters matching your function defaults
+    parser.add_argument(
+        "--mesh_type", type=str, default="square", choices=["square", "circular", "stadium"],
+        help="Type of domain geometry to build (default: %(default)s)"
+    )
+
+    parser.add_argument(
+        "--num_packets", type=int, default=1,
+        help="Number of Gaussian wavepackets to initialize (default: %(default)s)"
+    )
+
+    parser.add_argument(
+        "-L", type=float, default=10.0,
+        help="Full side length of the square domain (default: %(default)s)"
+    )
+    parser.add_argument(
+        "-N", type=int, default=60,
+        help="Number of grid divisions per side for the square (default: %(default)s)"
+    )
+    parser.add_argument(
+        "--nev", type=int, default=150,
+        help="Number of target eigenvalues to resolve with SLEPc (default: %(default)s)"
+    )
+    parser.add_argument(
+        "--radius", type=float, default=5.0,
+        help="Radius of the circular dot domain if geometry is circle (default: %(default)s)"
+    )
+    parser.add_argument(
+        "--target_h", type=float, default=0.2,
+        help="Target element mesh sizing h for the unstructured circle geometry (default: %(default)s)"
+    )
+
+    parser.add_argument(
+        "--T", type=float, default=8.0,
+        help="Total simulation time (default: %(default)s)"
+    )
+    parser.add_argument(
+        "--dt", type=float, default=0.005,
+        help="Crank-Nicolson timestep (default: %(default)s)"
+    )
+
+
+    # Parse what the user typed in the terminal
+    args = parser.parse_args()
+
+    # Pass the parsed CLI variables straight into your main function
+    main(
+        msh_type=args.mesh_type,
+        num_packets=args.num_packets,
+        L=args.L,
+        N=args.N,
+        nev=args.nev,
+        radius=args.radius,
+        target_h=args.target_h,
+        T=args.T,
+        dt=args.dt
+    )
