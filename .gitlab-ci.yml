@@ -19,9 +19,8 @@ variables:
 stack-check:
   stage: check
   script:
-    - python -c "import dolfinx, gmsh, petsc4py, slepc4py, mpi4py;
-                 print('FEniCSx stack ok')"
-    - python -c "import dolfinx; print('dolfinx version:', dolfinx.__version__)"
+    - python3 -c "import dolfinx, gmsh, petsc4py, slepc4py, mpi4py; print('FEniCSx stack ok')"
+    - python3 -c "import dolfinx; print('dolfinx version:', dolfinx.__version__)"
   rules:
     - if: '$CI_PIPELINE_SOURCE == "push"'
 
@@ -46,7 +45,7 @@ run-verification:
   stage: study
   script:
     - mkdir -p results/verification
-    - python scripts.run_verification
+    - python3 -m scripts.run_verification
   artifacts:
     paths:
       - results/verification/
@@ -58,7 +57,7 @@ run-timeverification:
   stage: study
   script:
     - mkdir -p results/time_verification
-    - python scripts.run_verification_time_evolution
+    - python3 -m scripts.run_verification_time_evolution
   artifacts:
     paths:
       - results/time_verification/
@@ -70,7 +69,7 @@ run-convergence:
   stage: study
   script:
     - mkdir -p results/convergence
-    - python scripts.run_convergence
+    - python3 -m scripts.run_convergence
   artifacts:
     paths:
       - results/convergence/
