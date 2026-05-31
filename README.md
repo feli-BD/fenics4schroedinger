@@ -5,15 +5,13 @@ An FEM-based simulation using **FEniCSx**, **SLEPc**, and **PETSc** to investiga
 ## Particle in 2D Box
 When a localized Gaussian wavepacket is initialized at the exact center of a hard-wall square domain ($V=0$, Homogeneous Dirichlet boundaries), it expands as an isotropic ring. Upon impacting all four walls simultaneously, symmetric reflections interfere constructively to form a sharp, quantized $3 \times 3$ grid pattern of probability density hot-spots.
 
-![Particle in a Box Evolution](media/simulation.gif)
+![Particle in a Box Evolution](media/particle_in_box.gif.gif)
 
 ## Lieb-Robinson Bounds for particle in 2D Box
 By breaking geometric symmetry (placing the initial wavepacket off-center at $x_0 = -L/4$), we isolate a clear, directional wavefront corridor. To verify the **Lieb-Robinson Speed Limit ($v_{LR}$)**, the simulation uses a dynamic visibility threshold mask (left video) alongside a twin boundary-contour tracker (right video). Information is strictly prohibited from leaking beyond the linear expanding light cone wall, except for a minor exponentially suppressed tail.
 
-<p align="center">
-  <video src="media/particle2_formatted.mp4" width="600" autoplay loop muted></video>
-  <video src="media/LR_inbox_formated.mp4" width="600" autoplay loop muted></video> 
-</p>
+![Particle in a Box Evolution](media/particle2.gif) ![Particle in a Box Evolution](media/particle2_LR.gif)
+
 
 
 ## Installation
