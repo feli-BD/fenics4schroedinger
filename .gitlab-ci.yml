@@ -4,6 +4,10 @@
 
 image: ghcr.io/fenics/dolfinx/dolfinx:stable
 
+before_script:
+  - source /usr/local/bin/dolfinx-real-mode
+  - export PYTHONPATH="$CI_PROJECT_DIR/src:$PYTHONPATH"
+
 # Pipeline stages run in order
 stages:
   - check
