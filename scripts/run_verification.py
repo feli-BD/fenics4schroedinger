@@ -9,6 +9,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import os
 from src.solver import Solver
+from src.mesh import make_square_mesh
 
 
 def analytic_eigenvalues(L: float, nev: int = 20):
@@ -31,7 +32,8 @@ def run_verification(L: float = 10.0, N: int = 60, nev: int = 20,
     os.makedirs(output_dir, exist_ok=True)
 
     print(f"Running verification: L={L}, N={N}, nev={nev}")
-    solver   = Solver(L=L, N=N, nev=nev)
+    msh, facet_tags = make_square_mesh(L=L, N=N)
+    solver   = Solver(msh=msh, facet_tags=facet_tags, L=L, N=N, nev=nev)
     A, M     = solver.assemble()
     energies, _ = solver.solve_eigenproblem(A, M)
 

@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import os
 from src.solver import Solver
 from scripts.run_verification import analytic_eigenvalues
-
+from src.mesh import make_square_mesh
 
 def run_convergence(L: float = 10.0,
                     mesh_sizes: list = [8, 16, 32, 64, 96],
@@ -25,7 +25,8 @@ def run_convergence(L: float = 10.0,
         h = L / N
         print(f"\nN={N}, h={h:.4f}")
 
-        solver      = Solver(L=L, N=N, nev=nev)
+        msh, facet_tags = make_square_mesh(L=L, N=N)
+        solver      = Solver(msh=msh, facet_tags=facet_tags, L=L, N=N, nev=nev)
         A, M        = solver.assemble()
         energies, _ = solver.solve_eigenproblem(A, M)
 
