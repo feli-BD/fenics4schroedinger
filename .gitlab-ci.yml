@@ -2,7 +2,7 @@
 #           GitLab CI/CD Pipeline
 ###################################################
 
-image: ghcr.io/fenics/dolfinx/dolfinx:v0.7.3
+image: ghcr.io/fenics/dolfinx/dolfinx:stable
 
 # Pipeline stages run in order
 stages:
