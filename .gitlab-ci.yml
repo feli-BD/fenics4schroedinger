@@ -1,0 +1,80 @@
+###################################################
+#           GitLab CI/CD Pipeline
+###################################################
+
+image: dolfinx/dolfinx:v0.7.3   # official FEniCSx Docker image
+
+# Pipeline stages run in order
+stages:
+  - check
+  - test
+  - study
+
+# ── Variables available to all jobs ──────────────────────────────────────────
+variables:
+  PYTHONPATH: "$CI_PROJECT_DIR/src"
+  RESULTS_DIR: "$CI_PROJECT_DIR/results"
+
+# ── Stage 1: check — fast sanity check on every push ─────────────────────────
+stack-check:
+  stage: check
+  script:
+    - python -c "import dolfinx, gmsh, petsc4py, slepc4py, mpi4py;
+                 print('FEniCSx stack ok')"
+    - python -c "import dolfinx; print('dolfinx version:', dolfinx.__version__)"
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+
+# ── Stage 2: test — run pytest suite ─────────────────────────────────────────
+verification-tests:
+  stage: test
+  script:
+    - pip install pytest --quiet
+    - pytest tests/test_verification.py -v --tb=short
+  artifacts:
+    when: always
+    reports:
+      junit: test-results.xml    # shows pass/fail in GitLab MR view
+    paths:
+      - test-results.xml
+    expire_in: 1 week
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+
+# ── Stage 3: study — run the science (only on main branch) ───────────────────
+run-verification:
+  stage: study
+  script:
+    - mkdir -p results/verification
+    - python scripts.run_verification
+  artifacts:
+    paths:
+      - results/verification/
+    expire_in: 1 month
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+run-timeverification:
+  stage: study
+  script:
+    - mkdir -p results/time-verification
+    - python scripts.run_verification_time_evolution
+  artifacts:
+    paths:
+      - results/verification/
+    expire_in: 1 month
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+run-convergence:
+  stage: study
+  script:
+    - mkdir -p results/convergence
+    - python scripts.run_convergence
+  artifacts:
+    paths:
+      - results/convergence/
+    expire_in: 1 month
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+

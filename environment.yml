@@ -1,0 +1,18 @@
+name: fem4schroedinger
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - fenics-dolfinx=0.7.3
+  - mpich
+  - petsc4py
+  - slepc4py
+  - gmsh
+  - python-gmsh
+  - numpy
+  - matplotlib
+  - pytest
+  - meshio
+  - h5py
+  - pip
