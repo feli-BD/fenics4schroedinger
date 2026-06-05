@@ -8,6 +8,15 @@ python3 -m scripts.main --mesh_type square
 
 ![Particle in a Square Box Evolution](media/square_1pkt.gif)
 
+## Lieb-Robinson Bounds
+Compute Lieb-Robinson bounds for square domain with offset wavepacket
+
+```bash
+python3 -m scripts.run_lieb_robinson_study 
+```
+![Particle with LR bounds](media/LR.gif) 
+![Particle without LR bounds](media/LR_woCone.gif)
+
 ## Circle
 
 Run a circular domain configuration 
