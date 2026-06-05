@@ -4,18 +4,16 @@ An FEM-based simulation using **FEniCSx**, **SLEPc**, and **PETSc** to investiga
 
 ## Quantum Stadium
 
+A two-dimensional quantum stadium is simulated. Two symmetric high-momentum wavepackets ($|k_x| = 10.0$) are initialized and evolved over time. 
+The curved semicircular caps break the spatial symmetry of the wavefunctions, rapidly scattering the localized packets into a complex, distributed quantum interference profile across the cavity.
+
 ![Particle in a Stadium Evolution](media/stadium_2pkt_colliding_rm.gif)
 
-## Particle in 2D Box
-When a localized Gaussian wavepacket is initialized at the exact center of a hard-wall square domain ($V=0$, Homogeneous Dirichlet boundaries), it expands as an isotropic ring. Upon impacting all four walls simultaneously, symmetric reflections interfere constructively to form a sharp, quantized $3 \times 3$ grid pattern of probability density hot-spots.
-
-![Particle in a Box Evolution](media/particle_in_box.gif)
-
-## Lieb-Robinson Bounds for particle in 2D Box
-By breaking geometric symmetry (placing the initial wavepacket off-center at $x_0 = -L/4$), we isolate a clear, directional wavefront corridor. To verify the **Lieb-Robinson Speed Limit ($v_{LR}$)**, the simulation uses a dynamic visibility threshold mask (left video) alongside a twin boundary-contour tracker (right video). Information is strictly prohibited from leaking beyond the linear expanding light cone wall, except for a minor exponentially suppressed tail.
-
-![Particle in a Box Evolution](media/particle2.gif) ![Particle in a Box Evolution](media/particle2_LR.gif)
-
+### Replicate this simulation:
+To run this exact multi-packet chaotic scattering configuration, execute the following command in your terminal:
+```bash
+python main.py --mesh_type stadium --num_packets 2 --L 10.0 --radius 5.0 --target_h 0.2 --nev 150 --T 5.0 --frames 120
+```
 
 ## Requirements & Installation
 
