@@ -13,10 +13,10 @@ from src.mesh import make_square_mesh
 from src.solver import Solver
 
 
-def run_time_evolution_verification(L=10.0, N=60, nev=50,T = 8.0, dt=0.05, output_dir="results/time_verification"):
+def run_time_evolution_verification(L=10.0, N=60, nev=50,T = 5.0, frames=120, output_dir="results/time_verification"):
     os.makedirs(output_dir, exist_ok=True)
 
-    print( f"Running time evolution verification: L={L}, N={N}, T={T}, dt={dt}")
+    print( f"Running time evolution verification: L={L}, N={N}, T={T}, frames={frames}")
 
     msh, facet_tags = make_square_mesh(L=L, N=N)
     solver = Solver(msh=msh, facet_tags=facet_tags, L=L, N=N, nev=nev)
@@ -33,6 +33,8 @@ def run_time_evolution_verification(L=10.0, N=60, nev=50,T = 8.0, dt=0.05, outpu
         energies=energies,
         eigvecs=eigvecs,
         psi0=psi0,
+        T = T,
+        frames = frames
     )
 
     indptr, indices, data = M.getValuesCSR()
