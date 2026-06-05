@@ -59,3 +59,12 @@ These runtime test configurations serve as validation sanity checks.
 python3 -m scripts.run_verification
 python3 -m scripts.run_verification_time_evolution
 ``` 
+
+### The results
+| Simulation Run  | Generation Script | Target Output Directory | What is saved |
+| :--- | :--- | :--- | :--- | 
+| Symmetric Particle in a box | main.py | eigenstates and particle_in_box_time_evol | The eigenstates are given as xdmf files and the particle_in_box_time is intended to be viewed as a pvd | 
+| Lieb-Robinson Study | run_lieb_robinson_study.py | lieb_robinson and wavepacket | In Lieb_Robinson/ three matplotlib plots are saved and in wavepacket/ there is a pvd file for the time evolution but also for the lieb-robinson light cone evolution in time. | 
+| Verfication eigenvalue solver | run_verification.py | verification | Saves a matplotlib plot  | 
+| Verfication time evolution | run_verification_time_evolution.py | time_verification | Saves a matplotlib plot  |
+| Convergenve study | run_convergence.py | convergence | Saves a matplotlib plot  |
