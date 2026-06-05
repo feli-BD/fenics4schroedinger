@@ -31,8 +31,13 @@ This project is built to run smoothly inside a **Linux/WSL2** environment
 ### Recommended Setup via Conda
 The most reliable method to install the underlying C-libraries (PETSc/SLEPc/DOLFINx) alongside Python is via `conda-forge`:
 
-### Create a dedicated environment with the FEniCSx stack
-conda create -n fenics-env -c conda-forge python=3.10 dolfinx mpich petsc4py slepc4py matplotlib numpy
+```bash
+# Create the environment from the file
+conda env create -f environment.yml
+
+# Activate the dedicated environment workspace
+conda activate fenics-env
+```
 
 ## Structure
 ```text
@@ -56,18 +61,19 @@ FEniCS4Schroedinger/
 ```
 
 ## Usage
+For more details see `scripts/README.md`.
 
 ### Main Time Evolution 
 
 ```bash
 # Quick default run (Square domain, single wavepacket)
-python3 -m scripts,main.py
+python3 -m scripts.main
 
 # Run a circular domain configuration with a fine mesh and custom eigenvalue resolution
-python3 -m scripts.main.py --mesh_type circle --radius 5.0 --target_h 0.12 --nev 200
+python3 -m scripts.main --mesh_type circular --radius 5.0 --target_h 0.12 --nev 200
 
 # Run a high-energy dual-wavepacket collision inside a chaotic Bunimovich Stadium
-python3 -m scripts.main.py --mesh_type stadium --num_packets 2 -L 6.0 --radius 3.0  --nev 250
+python3 -m scripts.main --mesh_type stadium --num_packets 2 -L 6.0 --radius 3.0  --nev 250
 
 ### Run Lieb Robinson for a particle in a 2D box 
 python3 -m scripts.run_lieb_robinson_study
