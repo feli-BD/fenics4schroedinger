@@ -3,25 +3,25 @@
 ## Square
 Quick default run (Square domain, single wavepacket)
 ```bash
-python3 -m scripts.main --mesh_type square --num_packets 1 -L 10.0 -N 60 
+python3 -m scripts.main --mesh_type square 
 ```
 
-![Particle in a Box Evolution](media/square_1pkt.gif)
+![Particle in a Square Box Evolution](media/square_1pkt.gif)
 
 ## Circle
 
 Run a circular domain configuration 
 ```bash
-python3 -m scripts.main --mesh_type circle --radius 5.0 --target_h 0.12 --nev 200
+python3 -m scripts.main --mesh_type circular
 ```
 
-![Particle in a Box Evolution](media/circular_1pkt.gif)
+![Particle in a Circular Box Evolution](media/circular_1pkt.gif)
 
 ## Stadium
 
 Run a high-energy dual-wavepacket collision inside a chaotic Bunimovich Stadium
 ```bash
-python3 -m scripts.main --mesh_type stadium --num_packets 2 -L 6.0 --radius 3.0  --nev 250
+python3 -m scripts.main --mesh_type stadium --num_packets 2 --T 10.0 --frames 500 
 ```
 
-![Particle in a Box Evolution](media/stadium_2pkt.gif)
+![Particle in a Stadium Evolution](media/stadium_2pkt_colliding.gif)
