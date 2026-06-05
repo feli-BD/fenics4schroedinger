@@ -13,7 +13,7 @@ from src.solver import Solver
 from src.mesh import make_square_mesh, make_circular_mesh, make_stadium_mesh
 
 
-def main(msh_type: str = "square", num_packets: int = 1, L: float = 10.0, N: int = 60, nev: int = 150, radius: float = 5.0, target_h: float = 0.2, T: float = 8.0, dt: float = 0.005):
+def main(msh_type: str = "square", num_packets: int = 1, L: float = 10.0, N: int = 60, nev: int = 150, radius: float = 5.0, target_h: float = 0.2, T: float = 5.0, frames: float = 120):
     print(f"--- Running Simulation Setup ---")
     print(f"Mesh Type: {msh_type} | Eigenvalues (nev): {nev}")
     output_dir = "results"
@@ -51,10 +51,15 @@ def main(msh_type: str = "square", num_packets: int = 1, L: float = 10.0, N: int
     os.makedirs(eig_dir, exist_ok=True)
     for i, vec in enumerate(eigvecs[:8]):      # save first 8 only
         psi = fem.Function(solver.V)
-        psi.x.array[:] = vec
-        psi.name = f"psi_{i}"
+        # psi.x.array[:] = vec
+        # psi.name = f"psi_{i}"
+        rho_eigen = np.abs(vec)**2
+        psi.x.array[:] = rho_eigen
+        
+        # Update the name so it renders correctly labeled in ParaView's pipeline
+        psi.name = f"probability_density_{i}"
         with io.XDMFFile(MPI.COMM_WORLD,
-                         f"{eig_dir}/eigenstate_{i:02d}.xdmf", "w") as f:
+                         f"{eig_dir}/eigenstate_{i:02d}_{msh_type}.xdmf", "w") as f:
             f.write_mesh(solver.msh)
             f.write_function(psi)
 
@@ -65,7 +70,7 @@ def main(msh_type: str = "square", num_packets: int = 1, L: float = 10.0, N: int
     y_coords = coords[:, 1]
 
     if num_packets == 1:
-        wavepacket_configs = [{"x0": 0.0, "y0": 0.0, "sigma": 0.4, "kx": 0.0, "ky": 0.0}]
+        wavepacket_configs = [{"x0": 0.0, "y0": 0.0, "sigma": 0.4, "kx": 2.0, "ky": 2.0}]
     elif num_packets == 2:
         wavepacket_configs = [
             {"x0": -L/4.0, "y0": 0.0, "sigma": 0.4, "kx":  4.0, "ky": 0.0},
@@ -78,12 +83,12 @@ def main(msh_type: str = "square", num_packets: int = 1, L: float = 10.0, N: int
 
     for packet in wavepacket_configs:
         r_squared = (x_coords - packet["x0"])**2 + (y_coords - packet["y0"])**2
-        psi0_raw += np.exp(-r_squared / (2 * packet["sigma"]**2))
+        psi0_raw += np.exp(-r_squared / (2 * packet["sigma"]**2)) * np.exp(1j * (packet["kx"] * x_coords + packet["ky"] * y_coords))
 
     # ── Spectral time evolution ────────────────────────────────────────────────
     print("\nRunning spectral time evolution...")
 
-    times, snapshots = solver.solve_time_evolution(M = M, energies=energies,eigvecs=eigvecs, psi0=psi0_raw)
+    times, snapshots = solver.solve_time_evolution(M = M, energies=energies,eigvecs=eigvecs, psi0=psi0_raw, T=T, frames = frames)
 
     psi_eval_func = fem.Function(solver.V, name="Probability_Density")
 
@@ -128,11 +133,11 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "-L", type=float, default=10.0,
+        "--L", type=float, default=10.0,
         help="Full side length of the square domain (default: %(default)s)"
     )
     parser.add_argument(
-        "-N", type=int, default=60,
+        "--N", type=int, default=60,
         help="Number of grid divisions per side for the square (default: %(default)s)"
     )
     parser.add_argument(
@@ -149,12 +154,12 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--T", type=float, default=8.0,
+        "--T", type=float, default=5.0,
         help="Total simulation time (default: %(default)s)"
     )
     parser.add_argument(
-        "--dt", type=float, default=0.005,
-        help="Crank-Nicolson timestep (default: %(default)s)"
+        "--frames", type=float, default=120,
+        help="Number of frames to save (default: %(default)s)"
     )
 
 
@@ -171,5 +176,5 @@ if __name__ == "__main__":
         radius=args.radius,
         target_h=args.target_h,
         T=args.T,
-        dt=args.dt
+        frames=args.frames
     )

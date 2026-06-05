@@ -115,7 +115,7 @@ class Solver:
         return np.array(energies), np.array(eigvecs)
 
     # ── Time evolution  ──────────────────────────────────────
-    def solve_time_evolution(self, M, energies,eigvecs,psi0,):
+    def solve_time_evolution(self, M, energies,eigvecs,psi0, T, frames):
         """
         Spectral evolution of
 
@@ -151,7 +151,8 @@ class Solver:
         vec_psi0       = M.createVecRight(); vec_psi0.array[:] = psi0
         vec_M_psi0     = M.createVecLeft();  M.mult(vec_psi0, vec_M_psi0)
         coeffs         = eigvecs @ vec_M_psi0.array
-        times = np.linspace(0, self.L / 2, 120)   # T ~ L/2 for propagation
+        # times = np.linspace(0, self.L / 2, 120)   # T ~ L/2 for propagation
+        times = np.linspace(0, T, int(frames))   # T ~ L for full reflection
 
         def psi_at_time(t):
             phases = np.exp(-1j * energies * t)
