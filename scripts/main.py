@@ -70,14 +70,27 @@ def main(msh_type: str = "square", num_packets: int = 1, L: float = 10.0, N: int
     y_coords = coords[:, 1]
 
     if num_packets == 1:
-        wavepacket_configs = [{"x0": 0.0, "y0": 0.0, "sigma": 0.4, "kx": 2.0, "ky": 2.0}]
+        wavepacket_configs = [{"x0": 0.0, "y0": 0.0, "sigma": 0.4, "kx": 0.0, "ky": 2.0}]
     elif num_packets == 2:
         wavepacket_configs = [
-            {"x0": -L/4.0, "y0": 0.0, "sigma": 0.4, "kx":  4.0, "ky": 0.0},
-            {"x0":  L/4.0, "y0": 0.0, "sigma": 0.4, "kx": -4.0, "ky": 0.0}
+            {"x0": -L/4.0, "y0": 0.0, "sigma": 0.2, "kx":  10.0, "ky": 0.0},
+            {"x0":  L/4.0, "y0": 0.0, "sigma": 0.2, "kx": -10.0, "ky": 0.0}
         ]
+    elif num_packets == 3:
+        wavepacket_configs = [
+            {"x0": -L/4.0, "y0":  0.0, "sigma": 0.2, "kx":  10.0, "ky":  0.0}, 
+            {"x0":  L/4.0, "y0":  0.0, "sigma": 0.2, "kx": -10.0, "ky":  0.0},
+            {"x0":   0.0,  "y0": -L/4.0, "sigma": 0.2, "kx":   0.0, "ky": 10.0}  
+        ]
+    elif num_packets == 4:
+        wavepacket_configs = [
+        {"x0": -L/4.0, "y0":   0.0,  "sigma": 0.2, "kx":  10.0, "ky":   0.0}, # Left
+        {"x0":  L/4.0, "y0":   0.0,  "sigma": 0.2, "kx": -10.0, "ky":   0.0}, # Right
+        {"x0":   0.0,  "y0": -L/4.0, "sigma": 0.2, "kx":   0.0, "ky":  10.0}, # Bottom
+        {"x0":   0.0,  "y0":  L/4.0, "sigma": 0.2, "kx":   0.0, "ky": -10.0}  # Top
+    ]
     else:
-        raise ValueError("Invalid number of wavepackets. Choose 1 or 2.")
+        raise ValueError("Invalid number of wavepackets. Choose 1, 2, 3, or 4.")
     
     psi0_raw = np.zeros_like(x_coords, dtype=np.complex128)
 

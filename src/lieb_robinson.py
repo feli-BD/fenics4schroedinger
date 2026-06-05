@@ -43,10 +43,12 @@ def compute_lieb_robinson(solver, energies, eigvecs, output_dir, M):
     # ── 1. Initial Gaussian wavepacket — left quarter of box ──────────────────
     x0    = -solver.L / 4
     y0    = 0.0
-    sigma = 0.8
+    sigma = 0.6
+    kx    = 0.0
+    ky    = 0.0
 
     psi0_raw  = np.exp(-((x_coords - x0)**2 + (y_coords - y0)**2)
-                        / (2 * sigma**2))
+                        / (2 * sigma**2)) * np.exp(1j * (kx * x_coords + ky * y_coords))
 
     # M-normalize the wavepacket
     vec_raw        = M.createVecRight(); vec_raw.array[:]  = psi0_raw
@@ -124,13 +126,13 @@ def compute_lieb_robinson(solver, energies, eigvecs, output_dir, M):
     print(f"  Analytic v_LR = sqrt(2*E_max) = {v_analytic:.4f}")
 
     # ── 6. Exponential decay fit outside cone ─────────────────────────────────
-    t_idx    = int(0.65 * len(times))
+    t_idx    = int(0.25 * len(times))
     t_slice  = times[t_idx]
     profile  = density_xt[t_idx]
     x_rel    = probe_xs - (x0 + v_LR * t_slice)
 
     mu, slope, intercept = None, None, None
-    outside  = x_rel > 0.5
+    outside  = (x_rel > 0.3) & (x_rel < 1.8)
     if outside.sum() > 4:
         valid = profile[outside] > 1e-12
         if valid.sum() > 4:
@@ -140,6 +142,13 @@ def compute_lieb_robinson(solver, energies, eigvecs, output_dir, M):
             )
             mu = -slope
             print(f"  Decay constant mu = {mu:.4f}")
+
+    # Pick 3 early-to-mid timesteps (e.g., 15%, 25%, and 35% through the simulation)
+    sample_time_indices = [int(len(times) * 0.15), int(len(times) * 0.25), int(len(times) * 0.35)]
+    
+    # We will choose a single pristine timestep to run our analytical polyfit line on, 
+    # for instance, the second one (25%).
+    fit_time_idx = sample_time_indices[1]
 
     # ── 7. Professional Publication-Quality Plots ─────────────────────────────
     plt.style.use("seaborn-v0_8-whitegrid" if "seaborn-v0_8-whitegrid" in plt.style.available else "default")
@@ -215,6 +224,15 @@ def compute_lieb_robinson(solver, energies, eigvecs, output_dir, M):
             np.exp(intercept + slope * x_fit),
             "b--", lw=2, label=fr"Fit: $e^{{-\mu x}}$ ($\mu={mu:.2f}$)"
         )
+
+    # Shading the valid Lieb-Robinson leakage window
+    axes[2].axvspan(0.3, 1.8, color="green", alpha=0.15, label="Pristine Leakage Zone")
+
+    # Shading the region contaminated by boundary effects/reflections
+    axes[2].axvspan(1.8, x_rel.max(), color="red", alpha=0.1, label="Boundary Reflection Zone")
+
+    # Re-plot data on top so it stays visible
+    axes[2].legend(loc="upper right", frameon=True)
     
     axes[2].set_xlabel(r"Distance from Wavefront Edge: $x - (x_0 + v_{LR}\,t)$", fontsize=11)
     axes[2].set_ylabel(r"Log Probability Density $\langle|\psi|^2\rangle_y$", fontsize=11)
@@ -223,6 +241,8 @@ def compute_lieb_robinson(solver, energies, eigvecs, output_dir, M):
     axes[2].set_ylim(1e-7, density_xt.max() * 2)
     axes[2].legend(loc="upper right", frameon=True)
     axes[2].grid(True, which="both", linestyle="--", alpha=0.5)
+
+  
 
     # Supertitle layout adjustments
     plt.suptitle(
@@ -233,9 +253,8 @@ def compute_lieb_robinson(solver, energies, eigvecs, output_dir, M):
     )
     
     plt.tight_layout()
-    
-    label = "spectral_enhanced"
-    outpath = os.path.join(output_dir, f"lieb_robinson_{label}.png")
+
+    outpath = os.path.join(output_dir, "lieb_robinson/lieb_robinson_eval.png")
     plt.savefig(outpath, dpi=200, bbox_inches="tight")
     plt.close(fig)
     print(f"  [SUCCESS] Enhanced visualization saved to {outpath}")
@@ -247,7 +266,7 @@ def compute_lieb_robinson(solver, energies, eigvecs, output_dir, M):
     x_dofs     = dof_coords[:, 0]
 
     # Initialize the VTK file exporter
-    vtk_path = os.path.join(output_dir, "wavepacket/wavepacket_evolution.pvd")
+    vtk_path = os.path.join(output_dir, "lieb_robinson/wavepacket_evolution.pvd")
     with io.VTKFile(solver.msh.comm, vtk_path, "w") as vtk:
         
         print("  Exporting snapshots for ParaView...")
