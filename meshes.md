@@ -33,4 +33,4 @@ Run a high-energy dual-wavepacket collision inside a chaotic Bunimovich Stadium
 python3 -m scripts.main --mesh_type stadium --num_packets 2 --T 10.0 --frames 500 
 ```
 
-![Particle in a Stadium Evolution](media/Result_GIFS/stadium_2pkt_colliding.gif)
+![Particle in a Stadium Evolution](media/Result_GIFS/stadium_2pkt_colliding_rm.gif)
