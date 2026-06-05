@@ -7,7 +7,7 @@ An FEM-based simulation using **FEniCSx**, **SLEPc**, and **PETSc** to investiga
 A two-dimensional quantum stadium is simulated. Two symmetric high-momentum wavepackets ($|k_x| = 10.0$) are initialized and evolved over time. 
 The curved semicircular caps break the spatial symmetry of the wavefunctions, rapidly scattering the localized packets into a complex, distributed quantum interference profile across the cavity.
 
-![Particle in a Stadium Evolution](media/stadium_2pkt_colliding_rm.gif)
+![Particle in a Stadium Evolution](media/Result_GIFS/stadium_2pkt_colliding_rm.gif)
 
 ### Replicate this simulation:
 To run this exact multi-packet chaotic scattering configuration, execute the following command in your terminal:
@@ -61,13 +61,13 @@ FEniCS4Schroedinger/
 
 ```bash
 # Quick default run (Square domain, single wavepacket)
-python3 scripts/main.py
+python3 -m scripts,main.py
 
 # Run a circular domain configuration with a fine mesh and custom eigenvalue resolution
-python3 scripts/main.py --mesh_type circle --radius 5.0 --target_h 0.12 --nev 200
+python3 -m scripts.main.py --mesh_type circle --radius 5.0 --target_h 0.12 --nev 200
 
 # Run a high-energy dual-wavepacket collision inside a chaotic Bunimovich Stadium
-python3 scripts/main.py --mesh_type stadium --num_packets 2 -L 6.0 --radius 3.0  --nev 250
+python3 -m scripts.main.py --mesh_type stadium --num_packets 2 -L 6.0 --radius 3.0  --nev 250
 
 ### Run Lieb Robinson for a particle in a 2D box 
 python3 -m scripts.run_lieb_robinson_study
@@ -84,7 +84,7 @@ python3 -m scripts.run_verification_time_evolution
 
 ### Convergence study
 ```bash
-python3 -m scripts.run_convergenc
+python3 -m scripts.run_convergence
 ```
 
 ### The results
