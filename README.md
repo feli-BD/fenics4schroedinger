@@ -2,6 +2,10 @@
 
 An FEM-based simulation using **FEniCSx**, **SLEPc**, and **PETSc** to investigate the quantum dynamics of a 2D wavepacket. This project explores Lieb-Robinson bounds in the context of a particle in a 2D box with fixed boundary conditions. 
 
+## Quantum Stadium
+
+![Particle in a Stadium Evolution](media/stadium_2pkt_colliding_rm.gif)
+
 ## Particle in 2D Box
 When a localized Gaussian wavepacket is initialized at the exact center of a hard-wall square domain ($V=0$, Homogeneous Dirichlet boundaries), it expands as an isotropic ring. Upon impacting all four walls simultaneously, symmetric reflections interfere constructively to form a sharp, quantized $3 \times 3$ grid pattern of probability density hot-spots.
 
@@ -13,9 +17,6 @@ By breaking geometric symmetry (placing the initial wavepacket off-center at $x_
 ![Particle in a Box Evolution](media/particle2.gif) ![Particle in a Box Evolution](media/particle2_LR.gif)
 
 
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
 ## Requirements & Installation
 
 This project is built to run smoothly inside a **Linux/WSL2** environment
@@ -75,14 +76,19 @@ python3 -m scripts.run_lieb_robinson_study
 ```
 
 ### Verify solver
+```bash
+# Eigenvalue FEM: 
+python3 -m scripts.run_verification
 
-Eigenvalue FEM: python3 -m scripts.run_verification
-
-Time Evolution: python3 -m scripts.run_verification_time_evolution
+#Time Evolution: 
+python3 -m scripts.run_verification_time_evolution
+```
 
 ### Convergence study
-python3 -m scripts.run_convergence
- 
+```bash
+python3 -m scripts.run_convergenc
+```
+
 ### The results
 | Simulation Run  | Generation Script | Target Output Directory | What is saved |
 | :--- | :--- | :--- | :--- | 
