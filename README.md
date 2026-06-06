@@ -37,7 +37,23 @@ conda env create -f environment.yml
 
 # Activate the dedicated environment workspace
 conda activate fenics-env
+
 ```
+
+If the creation is stuck on solving environment, please try using Libmamba solver engine:
+
+```bash
+# 1. Install the fast solver engine into your base conda manager
+conda install -n base conda-libmamba-solver -y
+
+# 2. Tell conda to use it permanently for environment changes
+conda config --set solver libmamba
+
+# 3. Retry: Create the environment from the file
+conda env create -f environment.yml
+```
+
+This might still take a minute but it should work. :)
 
 ## Structure
 ```text

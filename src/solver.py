@@ -139,7 +139,7 @@ class Solver:
         save_every: save every N steps
         """
         vec_raw = M.createVecRight()
-        vec_raw.array[:] = psi0
+        vec_raw.array[:] = psi0.real
 
         vec_M_raw = M.createVecLeft()
         M.mult(vec_raw, vec_M_raw)
@@ -151,8 +151,10 @@ class Solver:
         psi0 = psi0 / norm_M
 
         # ── 2. Projection onto eigenbasis ─────────────────────────────────────────
-        vec_psi0       = M.createVecRight(); vec_psi0.array[:] = psi0
-        vec_M_psi0     = M.createVecLeft();  M.mult(vec_psi0, vec_M_psi0)
+        vec_psi0 = M.createVecRight()
+        vec_psi0.array[:] = psi0.real
+        vec_M_psi0     = M.createVecLeft()
+        M.mult(vec_psi0, vec_M_psi0)
         coeffs         = eigvecs @ vec_M_psi0.array
         # times = np.linspace(0, self.L / 2, 120)   # T ~ L/2 for propagation
         times = np.linspace(0, T, int(frames))   # T ~ L for full reflection

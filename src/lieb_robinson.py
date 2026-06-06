@@ -51,13 +51,13 @@ def compute_lieb_robinson(solver, energies, eigvecs, output_dir, M):
                         / (2 * sigma**2)) * np.exp(1j * (kx * x_coords + ky * y_coords))
 
     # M-normalize the wavepacket
-    vec_raw        = M.createVecRight(); vec_raw.array[:]  = psi0_raw
+    vec_raw        = M.createVecRight(); vec_raw.array[:]  = psi0_raw.real
     vec_M_raw      = M.createVecLeft();  M.mult(vec_raw, vec_M_raw)
     norm_M         = np.sqrt(float(vec_raw.array @ vec_M_raw.array))
     psi0           = psi0_raw / norm_M
 
     # ── 2. Projection onto eigenbasis ─────────────────────────────────────────
-    vec_psi0       = M.createVecRight(); vec_psi0.array[:] = psi0
+    vec_psi0       = M.createVecRight(); vec_psi0.array[:] = psi0.real
     vec_M_psi0     = M.createVecLeft();  M.mult(vec_psi0, vec_M_psi0)
     coeffs         = eigvecs @ vec_M_psi0.array
 
@@ -67,8 +67,6 @@ def compute_lieb_robinson(solver, energies, eigvecs, output_dir, M):
         print("  WARNING: increase nev for reliable spectral evolution")
 
     # ── 3. Time points and wavefunction snapshots ─────────────────────────────
-
-    # TODO: combine this spectral evolution with the one in solver.solve_time_evolution to avoid code duplication
 
     times = np.linspace(0, solver.L / 2, 120)   # T ~ L/2 for propagation
 
@@ -253,6 +251,12 @@ def compute_lieb_robinson(solver, energies, eigvecs, output_dir, M):
     )
     
     plt.tight_layout()
+
+    outpath = os.path.join(output_dir, "lieb_robinson/lieb_robinson_eval.png")
+
+    plot_dir = os.path.dirname(outpath) 
+
+    os.makedirs(plot_dir, exist_ok=True)
 
     outpath = os.path.join(output_dir, "lieb_robinson/lieb_robinson_eval.png")
     plt.savefig(outpath, dpi=200, bbox_inches="tight")

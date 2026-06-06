@@ -6,8 +6,9 @@
 
 from mpi4py import MPI
 from dolfinx import io
-from dolfinx.io import gmsh as gmshio
 import gmsh
+from dolfinx.io import gmshio as gmshio
+
 
 def make_square_mesh(L: float, N: int):
     """Builds a square domain [-L/2, L/2]^2 using the Gmsh API."""
