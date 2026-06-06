@@ -1,7 +1,10 @@
 ###################################################
-#           FEniCSx Solver
-#           Time-independent + Crank-Nicolson
-#           Particle in a box (V=0)
+#                  FEniCSx Solver
+#    Time-independent  + Spectral Time Evolution
+#
+# Disclaimer: this code was inspired by the MSSD Lecture 3 Chapter 5.2 
+# https://rwth-acom.pages.git.nrw/teaching/mssd/lectures/03-notes.html#schr%C3%B6dingers-equation
+# 
 ###################################################
 
 import numpy as np

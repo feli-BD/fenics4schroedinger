@@ -13,11 +13,6 @@ from src.mesh import make_square_mesh
 
 
 def analytic_eigenvalues(L: float, nev: int = 20):
-    """
-    Analytic eigenvalues of the 2D particle in a box [-L/2, L/2]^2:
-        E_{nx,ny} = pi^2/2 * (nx^2 + ny^2) / L^2
-    with nx, ny = 1, 2, 3, ...  (zero excluded by Dirichlet BCs)
-    """
     half = L / 2.0
     energies = []
     for nx in range(1, 20):

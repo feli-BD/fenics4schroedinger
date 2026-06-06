@@ -1,3 +1,9 @@
+#################################################
+#            FEniCSx Mesh Generation
+#    Square, Circular, and Stadium Domains
+#
+##################################################
+
 from mpi4py import MPI
 from dolfinx import io
 from dolfinx.io import gmsh as gmshio

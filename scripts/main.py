@@ -55,9 +55,12 @@ def main(msh_type: str = "square", num_packets: int = 1, L: float = 10.0, N: int
         # psi.name = f"psi_{i}"
         rho_eigen = np.abs(vec)**2
         psi.x.array[:] = rho_eigen
-        
-        # Update the name so it renders correctly labeled in ParaView's pipeline
-        psi.name = f"probability_density_{i}"
+
+        E_val = energies[i]
+
+        # Include the energy value directly in the function name for ParaView
+        psi.name = f"probability_density_{i}_(E={E_val:.4f})"
+
         with io.XDMFFile(MPI.COMM_WORLD,
                          f"{eig_dir}/eigenstate_{i:02d}_{msh_type}.xdmf", "w") as f:
             f.write_mesh(solver.msh)
@@ -70,7 +73,7 @@ def main(msh_type: str = "square", num_packets: int = 1, L: float = 10.0, N: int
     y_coords = coords[:, 1]
 
     if num_packets == 1:
-        wavepacket_configs = [{"x0": 0.0, "y0": 0.0, "sigma": 0.4, "kx": 0.0, "ky": 2.0}]
+        wavepacket_configs = [{"x0": 0.0, "y0": 0.0, "sigma": 0.4, "kx": 2.0, "ky": 2.0}]
     elif num_packets == 2:
         wavepacket_configs = [
             {"x0": -L/4.0, "y0": 0.0, "sigma": 0.2, "kx":  10.0, "ky": 0.0},
