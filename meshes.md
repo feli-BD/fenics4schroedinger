@@ -30,10 +30,10 @@ Quantitative Proximity ComparisonBelow are the empirically extracted wavefront p
 | --- | --- | --- | --- | --- |
 | **0.00 (Center)** | 5.00 | $\sim 0.25$ | $\sim 0.61$ | Unobstructed Propagation |
 | **-2.50 (Center-Left)** | 2.50 | $\sim 0.39$ | $\sim 0.57$ | Transitional Expansion |
-| **-4.00 (Near-Wall)** | 1.00 | $\sim 0.61$* | $\sim 1.29$* | Strong Reflection Contamination |
+| **-4.00 (Near-Wall)** | 1.00 | $\sim 0.61$ | $\sim 1.29$ | Strong Reflection Contamination |
 
 **Note: The metrics are subject to numerical tracking distortion due to immediate phase-inverted backscattering from the Dirichlet boundary.* <br>
-**Note 2: The location of the wavepacket is currently still hardcoded so it needs to be changed manually. Sorry :(*
+**Note 2: The location of the wavepacket is currently still hardcoded so it needs to be changed manually in lieb_robinson.py. Sorry :(*
 
 ## Circle
 
