@@ -41,7 +41,7 @@ def compute_lieb_robinson(solver, energies, eigvecs, output_dir, M):
     y_coords = coords[:, 1]
 
     # ── 1. Initial Gaussian wavepacket — left quarter of box ──────────────────
-    x0    = -solver.L / 4
+    x0    = -solver.L/4 # centered at -L/4 to start well within the left half of the box # other options include -2/5*L or 0.0 for boundary reflection observation
     y0    = 0.0
     sigma = 0.6
     kx    = 0.0
