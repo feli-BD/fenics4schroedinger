@@ -7,7 +7,10 @@
 from mpi4py import MPI
 from dolfinx import io
 import gmsh
-from dolfinx.io import gmshio as gmshio
+try:
+    from dolfinx.io import gmshio as gmshio
+except ImportError:
+    from dolfinx.io import gmsh as gmshio
 
 
 def make_square_mesh(L: float, N: int):
